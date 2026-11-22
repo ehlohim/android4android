@@ -1,0 +1,45 @@
+name: Go scaffold checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Format, test, vet
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Check formatting
+        shell: bash
+        run: |
+          mapfile -d '' files < <(git ls-files -z -- '*.go')
+          if (( ${#files[@]} == 0 )); then
+            echo "No tracked Go source files found."
+            exit 1
+          fi
+          unformatted="$(gofmt -l "${files[@]}")"
+          if [[ -n "$unformatted" ]]; then
+            printf 'Run gofmt on:\n%s\n' "$unformatted"
+            exit 1
+          fi
+      - name: Unit tests
+        run: go test ./...
+      - name: Static checks
+        run: go vet ./...
+
+# Android/KVM, guest audio, and real calling require separate authorized lab runs.
+# This workflow intentionally uses no secrets, device access, or self-hosted runners.
